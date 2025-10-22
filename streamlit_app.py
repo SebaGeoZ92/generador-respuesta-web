@@ -4,64 +4,72 @@ import datetime
 import re
 import os
 
-st.set_page_config(page_title="Generador de Respuestas", layout="wide")
+# --- Archivos CSV --- #
+RESPUESTAS_CSV = 'respuestas.csv'
+COLEGIOS_CSV = 'colegios.csv'
 
-st.title("Generador de Respuestas (versión web)")
-
-# --- Archivos CSV locales ---
-RESPUESTAS_CSV = 'RESPUESTAS.csv'
-COLEGIOS_CSV = 'COLEGIOS.csv'
-
-respuestas_dict = {}
-colegios_dict = {}
-regiones = []
-comunas_por_region = {}
-
-# --- Cargar respuestas ---
-if os.path.exists(RESPUESTAS_CSV):
+# --- Funciones para cargar CSV --- #
+def cargar_respuestas(nombre_archivo):
+    respuestas = {}
     try:
-        df_respuestas = pd.read_csv(RESPUESTAS_CSV, delimiter=';', encoding='utf-8-sig')
-        for _, row in df_respuestas.iterrows():
-            caso = str(row.get('Caso', '')).strip()
-            resp = str(row.get('Respuesta', '')).strip()
-            if caso and resp:
-                respuestas_dict[caso] = resp
-        st.success("Archivo de respuestas cargado correctamente.")
+        with open(nombre_archivo, encoding='utf-8-sig') as f:
+            reader = pd.read_csv(f, delimiter=';')
+            for _, fila in reader.iterrows():
+                caso = str(fila.get('Caso', '')).strip()
+                respuesta = str(fila.get('Respuesta', '')).strip()
+                if caso and respuesta:
+                    respuestas[caso] = respuesta
     except Exception as e:
-        st.error(f"No se pudo leer {RESPUESTAS_CSV}: {e}")
-else:
-    st.error(f"No se encontró {RESPUESTAS_CSV} en el repositorio.")
+        st.error(f"No se pudo leer {nombre_archivo}: {e}")
+    return respuestas
 
-# --- Cargar colegios ---
-if os.path.exists(COLEGIOS_CSV):
+def cargar_colegios(nombre_archivo):
+    colegios = {}
+    regiones = set()
+    comunas_por_region = {}
     try:
-        df_colegios = pd.read_csv(COLEGIOS_CSV, delimiter=';', encoding='utf-8-sig')
-        regiones_set = set()
-        comunas_dict = {}
-        for _, row in df_colegios.iterrows():
-            codigo = str(row.get('codigo_rec', '')).strip()
-            region = str(row.get('region', '')).strip()
-            comuna = str(row.get('comuna', '')).strip()
-            nombre = str(row.get('recinto', '')).strip()
-            direccion = str(row.get('Direccion', '')).strip()
-            if codigo:
-                colegios_dict[codigo] = {
-                    'nombre': nombre,
-                    'direccion': direccion,
-                    'comuna': comuna,
-                    'region': region
-                }
-                regiones_set.add(region)
-                comunas_dict.setdefault(region, set()).add(comuna)
-        regiones = sorted(list(regiones_set))
-        comunas_por_region = {r: sorted(list(c)) for r, c in comunas_dict.items()}
-        st.success("Archivo de colegios cargado correctamente.")
+        with open(nombre_archivo, encoding='utf-8-sig') as f:
+            reader = pd.read_csv(f, delimiter=';')
+            for _, fila in reader.iterrows():
+                codigo = str(fila.get('codigo_rec', '')).strip()
+                region = str(fila.get('region', '')).strip()
+                comuna = str(fila.get('comuna', '')).strip()
+                nombre = str(fila.get('recinto', '')).strip()
+                direccion = str(fila.get('Direccion', '')).strip()
+                if codigo:
+                    colegios[codigo] = {
+                        'nombre': nombre,
+                        'direccion': direccion,
+                        'comuna': comuna,
+                        'region': region
+                    }
+                    regiones.add(region)
+                    comunas_por_region.setdefault(region, set()).add(comuna)
     except Exception as e:
-        st.error(f"No se pudo leer {COLEGIOS_CSV}: {e}")
-else:
-    st.error(f"No se encontró {COLEGIOS_CSV} en el repositorio.")
+        st.error(f"No se pudo leer {nombre_archivo}: {e}")
+    regiones_ordenadas = sorted(list(regiones))
+    comunas_por_region_ordenadas = {r: sorted(list(c)) for r, c in comunas_por_region.items()}
+    return colegios, regiones_ordenadas, comunas_por_region_ordenadas
 
-# --- Función para limpiar RUT ---
+# --- Cargar datos --- #
+respuestas = cargar_respuestas(RESPUESTAS_CSV)
+colegios, regiones, comunas_por_region = cargar_colegios(COLEGIOS_CSV)
+
+# --- Streamlit UI --- #
+st.title("Generador de Respuestas - Web")
+st.write("Genera respuestas y copia línea lista para Excel.")
+
+# --- Entrada de usuario --- #
+numero_reclamo = st.text_input("Número de Reclamo")
+rut_input = st.text_input("RUT (12.345.678-9)")
+caso = st.selectbox("Caso", sorted(respuestas.keys()) if respuestas else [])
+codigo_local = st.text_input("Código del Local")
+
+# --- Opciones para caso 5 --- #
+fecha_caso5 = st.text_input("Fecha (solo caso 5)")
+origen_caso5 = st.selectbox("Origen (solo caso 5)", ["", "Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"])
+
+# --- Función de RUT limpio --- #
 def limpiar_rut(rut):
     m = re.match(r'^\s*([\d\.]+)-?([\dkK])\s*$', rut)
     if m:
@@ -70,78 +78,52 @@ def limpiar_rut(rut):
         return cuerpo, dv
     return '', ''
 
-# --- Función para generar respuesta ---
-def generar_respuesta(caso, codigo_local, rut, numero_reclamo, fecha_extra=None, origen_extra=None):
-    if codigo_local not in colegios_dict:
+# --- Generar respuesta --- #
+if st.button("Generar Respuesta"):
+    if not numero_reclamo:
+        st.error("Debe ingresar número de reclamo.")
+    elif not rut_input:
+        st.error("Debe ingresar un RUT válido.")
+    elif not caso:
+        st.error("Debe seleccionar un caso.")
+    elif not codigo_local:
+        st.error("Debe ingresar o seleccionar el código del local.")
+    elif caso == '5' and (not fecha_caso5 or not origen_caso5):
+        st.error("Para el caso 5 debe completar Fecha y Origen.")
+    elif codigo_local not in colegios:
         st.error("Código de local no encontrado en la base.")
-        return ''
-    if caso not in respuestas_dict:
+    elif caso not in respuestas:
         st.error("Caso no válido.")
-        return ''
+    else:
+        # Preparar respuesta
+        plantilla = respuestas[caso]
+        colegio = colegios[codigo_local]
+        texto = plantilla
+        texto = texto.replace('(nombre del local)', colegio['nombre'])
+        texto = texto.replace('(direccion del local)', colegio['direccion'])
+        texto = texto.replace('(comuna respectiva)', colegio['comuna'])
+        texto = texto.replace('(region respectiva)', colegio['region'])
 
-    plantilla = respuestas_dict[caso]
-    colegio = colegios_dict[codigo_local]
-    texto = plantilla
-    texto = texto.replace('(nombre del local)', colegio['nombre'])
-    texto = texto.replace('(direccion del local)', colegio['direccion'])
-    texto = texto.replace('(comuna respectiva)', colegio['comuna'])
-    texto = texto.replace('(region respectiva)', colegio['region'])
-
-    if caso == '5':
-        if fecha_extra:
+        if caso == '5':
             if '(fecha)' in texto:
-                texto = texto.replace('(fecha)', fecha_extra)
+                texto = texto.replace('(fecha)', fecha_caso5)
             else:
-                texto += f" ({fecha_extra})"
-        if origen_extra:
+                texto += f" ({fecha_caso5})"
             if '(origen)' in texto:
-                texto = texto.replace('(origen)', origen_extra)
+                texto = texto.replace('(origen)', origen_caso5)
             else:
-                texto += f" ({origen_extra})"
-    return texto
+                texto += f" ({origen_caso5})"
 
-# --- Interfaz de inputs ---
-if respuestas_dict and colegios_dict:
-    st.subheader("Datos del Reclamo")
-    col1, col2 = st.columns(2)
-    with col1:
-        numero_reclamo = st.text_input("Número de Reclamo")
-        rut_input = st.text_input("RUT (formato 12.345.678-9)")
+        # RUT limpio y DV
         rut_limpio, dv = limpiar_rut(rut_input)
-        st.text(f"RUT limpio: {rut_limpio} - DV: {dv}")
-    with col2:
-        caso = st.selectbox("Selecciona Caso", sorted(respuestas_dict.keys()))
-        codigo_local = st.text_input("Código del Local")
 
-    # Inputs extra para caso 5
-    fecha_extra, origen_extra = '', ''
-    if caso == '5':
-        fecha_extra = st.text_input("Fecha")
-        origen_extra = st.selectbox("Origen", ["Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"])
+        # --- Construir línea lista para Excel --- #
+        fecha_hora = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        linea_para_excel = f"{fecha_hora};{numero_reclamo};{caso};{colegio['comuna']};{rut_limpio};{dv};{texto}"
 
-    if st.button("Generar Respuesta"):
-        if not numero_reclamo or not rut_limpio or not caso or not codigo_local:
-            st.warning("Complete todos los campos obligatorios.")
-        else:
-            respuesta_generada = generar_respuesta(caso, codigo_local, rut_limpio, numero_reclamo, fecha_extra, origen_extra)
-            if respuesta_generada:
-                st.subheader("Respuesta Generada")
-                st.text_area("", respuesta_generada, height=200)
-                st.success("Respuesta generada correctamente.")
-    
-    # --- Buscador de colegios ---
-    st.subheader("Buscar Colegios por Región y Comuna")
-    region_sel = st.selectbox("Región", [''] + regiones)
-    if region_sel:
-        comunas_disp = comunas_por_region.get(region_sel, [])
-        comuna_sel = st.selectbox("Comuna", [''] + comunas_disp)
-        if comuna_sel:
-            resultados = []
-            for cod, datos in colegios_dict.items():
-                if datos['region'] == region_sel and datos['comuna'] == comuna_sel:
-                    resultados.append(f"{cod}: {datos['nombre']} - {datos['direccion']}")
-            if resultados:
-                st.text_area("Resultados", "\n".join(resultados), height=200)
-            else:
-                st.text("No se encontraron colegios para la comuna seleccionada.")
+        # --- Mostrar respuesta y línea para copiar --- #
+        st.subheader("Respuesta generada:")
+        st.write(texto)
 
+        st.subheader("Línea lista para copiar en Excel:")
+        st.text_area("", linea_para_excel, height=100)
