@@ -5,8 +5,8 @@ import re
 import os
 
 # --- Archivos CSV --- #
-RESPUESTAS_CSV = 'respuestas.csv'
-COLEGIOS_CSV = 'colegios.csv'
+RESPUESTAS_CSV = 'RESPUESTAS.csv'
+COLEGIOS_CSV = 'COLEGIOS.csv'
 
 # --- Funciones para cargar CSV --- #
 def cargar_respuestas(nombre_archivo):
@@ -127,3 +127,4 @@ if st.button("Generar Respuesta"):
 
         st.subheader("Línea lista para copiar en Excel:")
         st.text_area("", linea_para_excel, height=100)
+
