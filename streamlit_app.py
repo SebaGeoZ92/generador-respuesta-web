@@ -18,45 +18,37 @@ comunas_por_region = {}
 
 # --- Cargar respuestas ---
 if os.path.exists(RESPUESTAS_CSV):
-    try:
-        df_respuestas = pd.read_csv(RESPUESTAS_CSV, delimiter=';', encoding='utf-8-sig')
-        for _, row in df_respuestas.iterrows():
-            caso = str(row.get('Caso', '')).strip()
-            resp = str(row.get('Respuesta', '')).strip()
-            if caso and resp:
-                respuestas_dict[caso] = resp
-        st.success("Archivo de respuestas cargado correctamente.")
-    except Exception as e:
-        st.error(f"No se pudo leer {RESPUESTAS_CSV}: {e}")
+    df_respuestas = pd.read_csv(RESPUESTAS_CSV, delimiter=';', encoding='utf-8-sig')
+    for _, row in df_respuestas.iterrows():
+        caso = str(row.get('Caso', '')).strip()
+        resp = str(row.get('Respuesta', '')).strip()
+        if caso and resp:
+            respuestas_dict[caso] = resp
 else:
     st.error(f"No se encontró {RESPUESTAS_CSV} en el repositorio.")
 
 # --- Cargar colegios ---
 if os.path.exists(COLEGIOS_CSV):
-    try:
-        df_colegios = pd.read_csv(COLEGIOS_CSV, delimiter=';', encoding='utf-8-sig')
-        regiones_set = set()
-        comunas_dict = {}
-        for _, row in df_colegios.iterrows():
-            codigo = str(row.get('codigo_rec', '')).strip()
-            region = str(row.get('region', '')).strip()
-            comuna = str(row.get('comuna', '')).strip()
-            nombre = str(row.get('recinto', '')).strip()
-            direccion = str(row.get('Direccion', '')).strip()
-            if codigo:
-                colegios_dict[codigo] = {
-                    'nombre': nombre,
-                    'direccion': direccion,
-                    'comuna': comuna,
-                    'region': region
-                }
-                regiones_set.add(region)
-                comunas_dict.setdefault(region, set()).add(comuna)
-        regiones = sorted(list(regiones_set))
-        comunas_por_region = {r: sorted(list(c)) for r, c in comunas_dict.items()}
-        st.success("Archivo de colegios cargado correctamente.")
-    except Exception as e:
-        st.error(f"No se pudo leer {COLEGIOS_CSV}: {e}")
+    df_colegios = pd.read_csv(COLEGIOS_CSV, delimiter=';', encoding='utf-8-sig')
+    regiones_set = set()
+    comunas_dict = {}
+    for _, row in df_colegios.iterrows():
+        codigo = str(row.get('codigo_rec', '')).strip()
+        region = str(row.get('region', '')).strip()
+        comuna = str(row.get('comuna', '')).strip()
+        nombre = str(row.get('recinto', '')).strip()
+        direccion = str(row.get('Direccion', '')).strip()
+        if codigo:
+            colegios_dict[codigo] = {
+                'nombre': nombre,
+                'direccion': direccion,
+                'comuna': comuna,
+                'region': region
+            }
+            regiones_set.add(region)
+            comunas_dict.setdefault(region, set()).add(comuna)
+    regiones = sorted(list(regiones_set))
+    comunas_por_region = {r: sorted(list(c)) for r, c in comunas_dict.items()}
 else:
     st.error(f"No se encontró {COLEGIOS_CSV} en el repositorio.")
 
@@ -70,7 +62,7 @@ def limpiar_rut(rut):
     return '', ''
 
 # --- Función para generar respuesta ---
-def generar_respuesta(caso, codigo_local, rut, numero_reclamo, fecha_extra=None, origen_extra=None):
+def generar_respuesta(caso, codigo_local, rut, numero_reclamo, fecha_extra='', origen_extra=''):
     if codigo_local not in colegios_dict:
         st.error("Código de local no encontrado en la base.")
         return ''
@@ -88,15 +80,9 @@ def generar_respuesta(caso, codigo_local, rut, numero_reclamo, fecha_extra=None,
 
     if caso == '5':
         if fecha_extra:
-            if '(fecha)' in texto:
-                texto = texto.replace('(fecha)', fecha_extra)
-            else:
-                texto += f" ({fecha_extra})"
+            texto = texto.replace('(fecha)', fecha_extra) if '(fecha)' in texto else texto + f" ({fecha_extra})"
         if origen_extra:
-            if '(origen)' in texto:
-                texto = texto.replace('(origen)', origen_extra)
-            else:
-                texto += f" ({origen_extra})"
+            texto = texto.replace('(origen)', origen_extra) if '(origen)' in texto else texto + f" ({origen_extra})"
     return texto
 
 # --- Interfaz de inputs ---
@@ -112,12 +98,9 @@ if respuestas_dict and colegios_dict:
         caso = st.selectbox("Selecciona Caso", sorted(respuestas_dict.keys()))
         codigo_local = st.text_input("Código del Local")
 
-    # Inputs extra para caso 5 dentro de un expander
-    fecha_extra, origen_extra = '', ''
-    if caso == '5':
-        with st.expander("Datos adicionales para Caso 5"):
-            fecha_extra = st.text_input("Fecha")
-            origen_extra = st.selectbox("Origen", ["Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"])
+    # Inputs extra para caso 5 siempre definidos, pero solo visibles si caso == 5
+    fecha_extra = st.text_input("Fecha (solo caso 5)", key='fecha_extra') if caso == '5' else ''
+    origen_extra = st.selectbox("Origen (solo caso 5)", ["Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"], key='origen_extra') if caso == '5' else ''
 
     if st.button("Generar Respuesta"):
         if not numero_reclamo or not rut_limpio or not caso or not codigo_local:
@@ -126,7 +109,7 @@ if respuestas_dict and colegios_dict:
             respuesta_generada = generar_respuesta(caso, codigo_local, rut_limpio, numero_reclamo, fecha_extra, origen_extra)
             if respuesta_generada:
                 st.subheader("Respuesta Generada (lista para copiar en Excel)")
-                st.text_area("", respuesta_generada, height=250)  # altura aumentada
+                st.text_area("", respuesta_generada, height=250)
 
     # --- Buscador de colegios ---
     st.subheader("Buscar Colegios por Región y Comuna")
