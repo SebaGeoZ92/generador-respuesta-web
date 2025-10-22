@@ -118,8 +118,9 @@ if region_sel:
     comunas_disp = comunas_por_region.get(region_sel, [])
     comuna_sel = st.selectbox("Comuna", [''] + comunas_disp)
     if comuna_sel:
-        resultados = [f"{cod}: {d['nombre']} - {d['direccion']}" for cod,d in colegios_dict.items()
+        resultados = [f"{cod}: {d['nombre']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
 
 
