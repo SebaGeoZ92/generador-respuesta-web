@@ -112,7 +112,7 @@ if st.button("Generar Respuesta"):
             st.text_area("", log_line, height=50)
 
 # --- Buscador de colegios ---
-st.subheader("Buscar Colegios por Región y Comuna")
+st.subheader("Buscar Local por Región y Comuna")
 region_sel = st.selectbox("Región", [''] + regiones)
 if region_sel:
     comunas_disp = comunas_por_region.get(region_sel, [])
@@ -121,6 +121,7 @@ if region_sel:
         resultados = [f"{cod}: {d['nombre']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
 
 
 
