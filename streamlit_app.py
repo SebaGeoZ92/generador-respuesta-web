@@ -92,7 +92,7 @@ with col2:
 
 # --- Inputs caso 5 siempre presentes ---
 fecha_extra = st.text_input("Fecha (solo caso 5)", key='fecha_extra')
-origen_extra = st.selectbox("Origen (solo caso 5)", ["Clave Única","Servicio Electoral","ChileAtiende","Registro Civil e Identificación"], key='origen_extra')
+origen_extra = st.selectbox("Origen (solo caso 5)", ["Clave Única","Oficina Servicio Electoral","ChileAtiende","Registro Civil e Identificación"], key='origen_extra')
 
 if st.button("Generar Respuesta"):
     if not numero_reclamo or not rut_limpio or not caso or not codigo_local:
@@ -108,7 +108,7 @@ if st.button("Generar Respuesta"):
         if respuesta_generada:
             st.subheader("Respuesta Generada")
             st.text_area("", respuesta_generada, height=250)
-            st.subheader("Línea de Log (lista para copiar en Excel)")
+            st.subheader("Fecha y hora; N° reclamo; RUT; N° Caso; Recinto")
             st.text_area("", log_line, height=50)
 
 # --- Buscador de colegios ---
@@ -121,4 +121,5 @@ if region_sel:
         resultados = [f"{cod}: {d['nombre']} - {d['direccion']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
 
