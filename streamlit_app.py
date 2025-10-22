@@ -2,23 +2,25 @@ import streamlit as st
 import pandas as pd
 import datetime
 import re
+import os
 
 st.set_page_config(page_title="Generador de Respuestas", layout="wide")
 
 st.title("Generador de Respuestas (versión web)")
 
-# --- Subida de archivos CSV ---
-respuestas_file = st.file_uploader("Sube el archivo respuestas.csv", type=["csv"])
-colegios_file = st.file_uploader("Sube el archivo colegios.csv", type=["csv"])
+# --- Archivos CSV locales ---
+RESPUESTAS_CSV = 'respuestas.csv'
+COLEGIOS_CSV = 'colegios.csv'
 
 respuestas_dict = {}
 colegios_dict = {}
 regiones = []
 comunas_por_region = {}
 
-if respuestas_file:
+# --- Cargar respuestas ---
+if os.path.exists(RESPUESTAS_CSV):
     try:
-        df_respuestas = pd.read_csv(respuestas_file, delimiter=';', encoding='utf-8-sig')
+        df_respuestas = pd.read_csv(RESPUESTAS_CSV, delimiter=';', encoding='utf-8-sig')
         for _, row in df_respuestas.iterrows():
             caso = str(row.get('Caso', '')).strip()
             resp = str(row.get('Respuesta', '')).strip()
@@ -26,11 +28,14 @@ if respuestas_file:
                 respuestas_dict[caso] = resp
         st.success("Archivo de respuestas cargado correctamente.")
     except Exception as e:
-        st.error(f"No se pudo leer respuestas.csv: {e}")
+        st.error(f"No se pudo leer {RESPUESTAS_CSV}: {e}")
+else:
+    st.error(f"No se encontró {RESPUESTAS_CSV} en el repositorio.")
 
-if colegios_file:
+# --- Cargar colegios ---
+if os.path.exists(COLEGIOS_CSV):
     try:
-        df_colegios = pd.read_csv(colegios_file, delimiter=';', encoding='utf-8-sig')
+        df_colegios = pd.read_csv(COLEGIOS_CSV, delimiter=';', encoding='utf-8-sig')
         regiones_set = set()
         comunas_dict = {}
         for _, row in df_colegios.iterrows():
@@ -52,7 +57,9 @@ if colegios_file:
         comunas_por_region = {r: sorted(list(c)) for r, c in comunas_dict.items()}
         st.success("Archivo de colegios cargado correctamente.")
     except Exception as e:
-        st.error(f"No se pudo leer colegios.csv: {e}")
+        st.error(f"No se pudo leer {COLEGIOS_CSV}: {e}")
+else:
+    st.error(f"No se encontró {COLEGIOS_CSV} en el repositorio.")
 
 # --- Función para limpiar RUT ---
 def limpiar_rut(rut):
@@ -137,4 +144,3 @@ if respuestas_dict and colegios_dict:
                 st.text_area("Resultados", "\n".join(resultados), height=200)
             else:
                 st.text("No se encontraron colegios para la comuna seleccionada.")
-
