@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import re
-from openai import OpenAI
 
-# Inicialización del cliente OpenAI
-client = OpenAI()
 
 # Función para limpiar RUT y extraer DV
 def separar_rut_dv(rut):
@@ -102,3 +99,4 @@ if st.button("Generar Respuesta"):
             st.text_area("", linea_excel, height=100)
 
             st.success("✅ Proceso completado correctamente.")
+
