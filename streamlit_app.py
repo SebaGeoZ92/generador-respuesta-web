@@ -9,8 +9,8 @@ st.set_page_config(page_title="Generador de Respuestas", layout="wide")
 st.title("Generador de Respuestas (versión web)")
 
 # --- Archivos CSV locales ---
-RESPUESTAS_CSV = 'respuestas.csv'
-COLEGIOS_CSV = 'colegios.csv'
+RESPUESTAS_CSV = 'RESPUESTAS.csv'
+COLEGIOS_CSV = 'COLEGIOS.csv'
 
 respuestas_dict = {}
 colegios_dict = {}
@@ -144,3 +144,4 @@ if respuestas_dict and colegios_dict:
                 st.text_area("Resultados", "\n".join(resultados), height=200)
             else:
                 st.text("No se encontraron colegios para la comuna seleccionada.")
+
