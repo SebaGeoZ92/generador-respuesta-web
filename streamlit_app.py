@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 import os
+import datetime
 
 st.set_page_config(page_title="Generador de Respuestas", layout="wide")
 st.title("Generador de Respuestas (versión web)")
@@ -67,12 +68,16 @@ def generar_respuesta(caso, codigo_local, rut, numero_reclamo, fecha_extra='', o
         if origen_extra: texto = texto.replace('(origen)', origen_extra) if '(origen)' in texto else texto + f" ({origen_extra})"
     return texto
 
+
 def generar_log(numero_reclamo, rut_limpio, dv, caso, codigo_local, fecha_extra='', origen_extra=''):
-    # Línea lista para copiar en Excel
-    campos = [numero_reclamo, f"{rut_limpio}-{dv}", caso, codigo_local]
+    # Timestamp actual
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Campos para Excel
+    campos = [timestamp, numero_reclamo, f"{rut_limpio}-{dv}", caso, codigo_local]
     if caso == '5':
         campos += [fecha_extra, origen_extra]
     return ";".join(str(c) for c in campos)
+
 
 # --- Inputs ---
 col1, col2 = st.columns(2)
@@ -116,3 +121,4 @@ if region_sel:
         resultados = [f"{cod}: {d['nombre']} - {d['direccion']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
