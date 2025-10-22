@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import datetime
 import re
 import os
 
@@ -111,11 +112,12 @@ if respuestas_dict and colegios_dict:
         caso = st.selectbox("Selecciona Caso", sorted(respuestas_dict.keys()))
         codigo_local = st.text_input("Código del Local")
 
-    # Inputs extra para caso 5
+    # Inputs extra para caso 5 dentro de un expander
     fecha_extra, origen_extra = '', ''
     if caso == '5':
-        fecha_extra = st.text_input("Fecha")
-        origen_extra = st.selectbox("Origen", ["Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"])
+        with st.expander("Datos adicionales para Caso 5"):
+            fecha_extra = st.text_input("Fecha")
+            origen_extra = st.selectbox("Origen", ["Clave Única", "Servicio Electoral", "ChileAtiende", "Registro Civil e Identificación"])
 
     if st.button("Generar Respuesta"):
         if not numero_reclamo or not rut_limpio or not caso or not codigo_local:
@@ -123,12 +125,8 @@ if respuestas_dict and colegios_dict:
         else:
             respuesta_generada = generar_respuesta(caso, codigo_local, rut_limpio, numero_reclamo, fecha_extra, origen_extra)
             if respuesta_generada:
-                st.subheader("Respuesta Generada")
-                st.text_area("", respuesta_generada, height=200)
-                st.success("Respuesta generada correctamente.")
-                # Línea lista para copiar a Excel
-                linea_excel = f"{numero_reclamo};{rut_limpio}-{dv};{caso};{codigo_local};{respuesta_generada.replace(';', ',')}"
-                st.text_area("Línea para Excel", linea_excel, height=50)
+                st.subheader("Respuesta Generada (lista para copiar en Excel)")
+                st.text_area("", respuesta_generada, height=250)  # altura aumentada
 
     # --- Buscador de colegios ---
     st.subheader("Buscar Colegios por Región y Comuna")
