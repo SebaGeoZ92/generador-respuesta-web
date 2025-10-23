@@ -9,6 +9,20 @@ st.title("Generador de Respuestas (versión web)")
 
 RESPUESTAS_CSV = 'RESPUESTAS.csv'
 COLEGIOS_CSV = 'COLEGIOS.csv'
+CONTADOR_TXT = 'contador.txt'
+
+# --- Contador persistente ---
+if os.path.exists(CONTADOR_TXT):
+    try:
+        with open(CONTADOR_TXT, 'r') as f:
+            contador = int(f.read().strip())
+    except:
+        contador = 0
+else:
+    contador = 0
+
+st.subheader(f"Total de respuestas generadas: {contador}")
+
 
 # --- Cargar CSVs ---
 respuestas_dict = {}
@@ -107,6 +121,12 @@ if st.button("Generar Respuesta"):
             st.subheader("Fecha y hora; N° reclamo; RUT; N° Caso; Recinto")
             st.text_area("", log_line, height=50)
 
+            # --- Actualizar contador ---
+            contador += 1
+            with open(CONTADOR_TXT, 'w') as f:
+                f.write(str(contador))
+            st.success(f"Total de respuestas generadas: {contador}")
+
 # --- Buscador de colegios ---
 st.subheader("Buscar Local por Región y Comuna")
 region_sel = st.selectbox("Región", [''] + regiones)
@@ -117,3 +137,4 @@ if region_sel:
         resultados = [f"{cod}: {d['nombre']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
