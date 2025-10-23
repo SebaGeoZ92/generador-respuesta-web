@@ -26,17 +26,21 @@ st.subheader(f"Total de respuestas generadas: {contador}")
 
 # --- Cargar CSVs ---
 respuestas_dict = {}
+casos_dict = {}
 colegios_dict = {}
 regiones = []
 comunas_por_region = {}
 
+# --- Cargar respuestas ---
 if os.path.exists(RESPUESTAS_CSV):
     df_respuestas = pd.read_csv(RESPUESTAS_CSV, delimiter=';', encoding='utf-8-sig')
     for _, row in df_respuestas.iterrows():
         caso = str(row.get('Caso', '')).strip()
+        desc = str(row.get('Descripcion', '')).strip()
         resp = str(row.get('Respuesta', '')).strip()
         if caso and resp:
             respuestas_dict[caso] = resp
+            casos_dict[caso] = desc
 else:
     st.error(f"No se encontró {RESPUESTAS_CSV}")
 
@@ -97,7 +101,10 @@ with col1:
     rut_limpio, dv = limpiar_rut(rut_input)
     st.text(f"RUT limpio: {rut_limpio} - DV: {dv}")
 with col2:
-    caso = st.selectbox("Selecciona Caso", sorted(respuestas_dict.keys()))
+    # Mostrar selectbox con caso + descripción
+    opciones_casos = [f"{c} - {desc}" for c, desc in casos_dict.items()]
+    seleccion = st.selectbox("Selecciona Caso", opciones_casos)
+    caso = seleccion.split(" - ")[0]
     codigo_local = st.text_input("Código del Local")
 
 # --- Inputs caso 5 siempre presentes ---
@@ -137,4 +144,5 @@ if region_sel:
         resultados = [f"{cod}: {d['nombre']}" for cod,d in colegios_dict.items()
                       if d['region']==region_sel and d['comuna']==comuna_sel]
         st.text_area("Resultados", "\n".join(resultados) if resultados else "No se encontraron colegios.", height=200)
+
 
